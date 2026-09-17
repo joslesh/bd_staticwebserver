@@ -1,4 +1,6 @@
 from textnode import TextType, TextNode
+from markdown_block import BlockType
+from htmlnode import HTMLNode
 import re
 
 def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: TextType) -> list[TextNode]:
@@ -80,3 +82,80 @@ def text_to_textnodes(text: str) -> list[TextNode]:
     nodes = split_nodes_image(nodes)
     nodes = split_nodes_link(nodes)
     return nodes
+
+def markdown_to_blocks(markdown: str) -> list[str]:
+    final_block_strings = []
+    for block in markdown.split("\n\n"):
+        if block == "":
+            continue
+        final_block_strings.append(block.strip())
+    return final_block_strings
+
+def block_to_block_type(block: str) -> BlockType:
+    # Find the type of block type each block that is passed in is, then return the given proper block. (First idea was to use a regex for each case, but hopefully this simpler approach works better)
+    first_char_of_block = block[:1]
+    if len(block) < 2:
+        return BlockType.PARAGRAPH
+    match first_char_of_block:
+        case "#":
+            #Somehow check if up to the first chars are a #, then a space.
+            # For now will just check the first char.
+            #space_after = True
+            #pound_count = 0
+            #for char in block:
+            #    if pound_count > 6:
+            #        if char != 
+            return BlockType.HEADING
+        case "`":
+            # This should work no matter what the given input is
+            if block[0:4] == "```\n" and block[-3:] == "```":
+                return BlockType.CODE
+            else:
+                return BlockType.PARAGRAPH
+        case ">":
+            line_list = block.split("\n")
+            all_newline = True
+            for line in line_list:
+                if line[0] != ">":
+                    all_newline = False
+                    break
+            if all_newline:
+                return BlockType.QUOTE
+            return BlockType.PARAGRAPH
+        case "-":
+            line_list = block.split("\n")
+            line_starts_with_dash = True
+            for line in line_list:
+                if line[:2] == "- ":
+                    continue
+                else:
+                    line_starts_with_dash = False
+            if line_starts_with_dash:
+                return BlockType.UNORDERED_LIST
+            else:
+                return BlockType.PARAGRAPH
+        case "1":
+            line_list = block.split("\n")
+            line_count = 1
+            for line in line_list:
+                if line[:3] == f"{line_count}. ":
+                    line_count += 1
+                    continue
+                else:
+                    return BlockType.PARAGRAPH
+            return BlockType.ORDERED_LIST
+        case _:
+            return BlockType.PARAGRAPH
+         
+
+def markdown_to_html_node(markdown: str) -> HTMLNode:
+    # Breaks down markdown file into one parent HTML Node
+    # Start by breaking the inital str into blocks:
+    list_of_blocks = markdown_to_blocks(markdown)
+    # Then take the list and transfer the blocks into nodes, with the proper types.
+    # (helper function for creating the proper nodes and node types?)
+    for block in list_of_blocks:
+        block_type = block_to_block_type(block)
+        print(block_type, block)
+
+    

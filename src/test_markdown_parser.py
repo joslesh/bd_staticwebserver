@@ -1,5 +1,5 @@
 import unittest
-from markdown_parser import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes
+from markdown_parser import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type, BlockType, markdown_to_html_node
 from textnode import TextNode, TextType
 
 class TestMarkdownParser(unittest.TestCase):
@@ -128,6 +128,129 @@ class TestMarkdownParser(unittest.TestCase):
             ]
         new_nodes = text_to_textnodes(text)
         self.assertListEqual(new_nodes, expected)
+
+    def test_markdown_to_blocks(self):
+        md = """
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ],
+        )
+
+    def test_heading_block_to_blocktype(self):
+        block = "# Heading!"
+        block2 = "## Heading!"
+        block3 = "###### Heading!"
+        block4 = "# H"
+        blocktypes = [
+                block_to_block_type(block),
+                block_to_block_type(block2),
+                block_to_block_type(block3),
+                block_to_block_type(block4)
+                ]
+        expected = [BlockType.HEADING, BlockType.HEADING, BlockType.HEADING, BlockType.HEADING]
+        self.assertListEqual(expected, blocktypes)
+
+    def test_code_block_to_blocktype(self):
+        block = "```\n This is a code block! ```"
+        not_code_block = "`` just text ``"
+        not_code_block2 = "``` just text ```"
+        blocktypes = [
+                block_to_block_type(block),
+                block_to_block_type(not_code_block),
+                block_to_block_type(not_code_block2)
+                ]
+        expected = [BlockType.CODE, BlockType.PARAGRAPH, BlockType.PARAGRAPH]
+        self.assertListEqual(blocktypes, expected)
+
+    def test_quote_block_to_blocktype(self):
+        block = "> This is a quote!"
+        block2 = ">This is also a quote!"
+        block3 = "This is not a quote"
+        block4 = ">This is a\n> double line quote"
+        blocktypes = [
+                block_to_block_type(block),
+                block_to_block_type(block2),
+                block_to_block_type(block3),
+                block_to_block_type(block4)
+                ]
+        expected = [BlockType.QUOTE, BlockType.QUOTE, BlockType.PARAGRAPH, BlockType.QUOTE]
+        self.assertListEqual(blocktypes, expected)
+
+    def test_unordered_list_block_to_blocktype(self):
+        block = "- This is a list"
+        block2 = "-This is not a list"
+        block3 = "- This is a\n- multiple line list"
+        block4 = "- This is \n-almost an unordered list"
+        blocktypes = [
+                block_to_block_type(block),
+                block_to_block_type(block2),
+                block_to_block_type(block3),
+                block_to_block_type(block4)
+                ]
+        expected = [BlockType.UNORDERED_LIST, BlockType.PARAGRAPH, BlockType.UNORDERED_LIST, BlockType.PARAGRAPH]
+        self.assertListEqual(blocktypes, expected)
+
+    def test_ordered_list_block_to_blocktype(self):
+        block = "1. This is a short list"
+        block2 = "2. This is not a list"
+        block3 = "1. This is a\n2. list with\n3. three elements"
+        block4 = "1. This is not a\n2 list"
+        block5 = "1.This is not a list"
+        blocktypes = [
+                block_to_block_type(block),
+                block_to_block_type(block2),
+                block_to_block_type(block3),
+                block_to_block_type(block4),
+                block_to_block_type(block5)
+                ]
+        expected = [BlockType.ORDERED_LIST, BlockType.PARAGRAPH, BlockType.ORDERED_LIST, BlockType.PARAGRAPH, BlockType.PARAGRAPH]
+        self.assertListEqual(blocktypes, expected)
+
+    def test_paragraphs(self):
+        md = """
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+
+"""
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><p>This is <b>bolded</b> paragraph text in a p tag here</p><p>This is another paragraph with <i>italic</i> text and <code>code</code> here</p></div>",
+        )
+
+
+    def test_codeblock(self):
+        md = """
+```
+This is text that _should_ remain
+the **same** even with inline stuff
+```
+"""
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><pre><code>This is text that _should_ remain\nthe **same** even with inline stuff\n</code></pre></div>",
+        )
 
 if __name__ == "__main__":
     unittest.main()
