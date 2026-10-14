@@ -2,17 +2,23 @@ from textnode import TextNode
 from markdown_parser import markdown_to_html_node
 import os
 import shutil
+import sys
 
 
 
 def main() -> None:
-    delete_and_copy("static", "public")
-    generate_page_recursive("content", "template.html", "public")
+    print(sys.argv)
+    base_path = sys.argv[1]
+    if base_path == "":
+        base_path = "/"
+    delete_and_copy("static", "docs")
+    generate_page_recursive("content", "template.html", "docs", base_path)
 
 def delete_and_copy(source: str, destination: str) -> None:
     # Set each of the pathsh for the source and destination files
     cwd = os.getcwd()
     source_path = os.path.join(cwd, source)
+    print(source_path)
     destination_path = os.path.join(cwd, destination)
     if not os.path.exists(source_path) and not os.path.exists(destination_path):
         raise Exception("One of the paths does not exist")
@@ -41,29 +47,33 @@ def extract_title(markdown_file: str) -> str:
     else:
         return heading_line
 
-def generate_page(from_path: str, template_path: str, dest_path: str) -> None:
-    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+def generate_page(from_path: str, template_path: str, dest_path: str, base_path: str) -> None:
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}", "\n----------")
+    cwd = os.getcwd()
+    source_path = os.path.join(cwd, from_path)
+    destination_path = os.path.join(cwd, dest_path)
     markdown, template = "", ""
-    with open(from_path, "r") as md_file:
+    with open(source_path, "r") as md_file:
         markdown = md_file.read()
     with open(template_path, "r") as temp_file:
         template = temp_file.read()
     html = markdown_to_html_node(markdown).to_html()
-    title = extract_title(from_path)
+    title = extract_title(source_path)
     new_template = template.replace("{{ Title }}", title).replace("{{ Content }}", html)
-    with open(dest_path, "w") as html_file:
-        html_file.write(new_template)
+    newer_template = new_template.replace('href="/', f'href="{base_path}').replace('src="/', f'src="{base_path}')
+    with open(destination_path, "w") as html_file:
+        html_file.write(newer_template)
 
-def generate_page_recursive(dir_path_constant: str, template_path: str, dest_dir_path: str) -> None:
+def generate_page_recursive(dir_path_constant: str, template_path: str, dest_dir_path: str, base_path: str) -> None:
     files_in_dir_path = os.listdir(dir_path_constant)
     for file in files_in_dir_path:
         new_dir = os.path.join(dir_path_constant, file)
         new_dest_dir_path = os.path.join(dest_dir_path, file)
         if os.path.isdir(new_dir):
             os.mkdir(new_dest_dir_path)
-            generate_page_recursive(new_dir, template_path, new_dest_dir_path)
+            generate_page_recursive(new_dir, template_path, new_dest_dir_path, base_path)
         else:
-            generate_page(new_dir, template_path, new_dest_dir_path.replace("md", "html"))
+            generate_page(new_dir, template_path, new_dest_dir_path.replace("md", "html"), base_path)
 
 
 main()
