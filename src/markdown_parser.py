@@ -1,6 +1,6 @@
-from textnode import TextType, TextNode
+from textnode import TextType, TextNode, text_node_to_html_node
 from markdown_block import BlockType
-from htmlnode import HTMLNode
+from htmlnode import HTMLNode, LeafNode, ParentNode
 import re
 
 def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: TextType) -> list[TextNode]:
@@ -149,13 +149,60 @@ def block_to_block_type(block: str) -> BlockType:
          
 
 def markdown_to_html_node(markdown: str) -> HTMLNode:
+    list_of_children = []
     # Breaks down markdown file into one parent HTML Node
     # Start by breaking the inital str into blocks:
     list_of_blocks = markdown_to_blocks(markdown)
     # Then take the list and transfer the blocks into nodes, with the proper types.
     # (helper function for creating the proper nodes and node types?)
+    
     for block in list_of_blocks:
         block_type = block_to_block_type(block)
-        print(block_type, block)
+        match block_type:
+            case BlockType.CODE:
+                final_text = block.strip("```").lstrip()
+                list_of_children.append(ParentNode("pre", [LeafNode("code", final_text)]))
+            case BlockType.PARAGRAPH:
+                list_of_children.append(ParentNode("p", text_to_children(block)))
 
-    
+            case BlockType.UNORDERED_LIST:
+                list_of_children.append(ParentNode("ul", text_unordered_list_to_children(block))) 
+
+            case BlockType.ORDERED_LIST:
+                list_of_children.append(ParentNode("ol", text_ordered_list_to_children(block)))
+
+            case BlockType.HEADING:
+                list_of_children.append(text_header_to_children(block))
+
+    return ParentNode("div", list_of_children)
+
+
+def text_to_children(text: str) -> list[HTMLNode]:
+    no_newline_text = text.replace("\n", " ")
+    text_nodes = text_to_textnodes(no_newline_text)
+    new_list = []
+    for node in text_nodes:
+        new_list.append(text_node_to_html_node(node))
+    return new_list
+
+def text_unordered_list_to_children(text: str) -> list[HTMLNode]:
+    list_of_lines = text.split("\n")
+    list_of_cleaned_lines = []
+    for line in list_of_lines:
+        new_line = line.strip("- ").strip()
+        list_of_cleaned_lines.append(LeafNode("li", new_line))
+    return list_of_cleaned_lines
+
+def text_ordered_list_to_children(text: str) -> list[HTMLNode]:
+    list_of_lines = text.split("\n")
+    list_of_cleaned_lines = []
+    for line in list_of_lines:
+        new_line = line[3:]
+        list_of_cleaned_lines.append(LeafNode("li", new_line))
+    return list_of_cleaned_lines
+
+def text_header_to_children(text: str) -> list[HTMLNode]:
+    header_count = text.count("#")
+    new_line = text[header_count + 1:]
+    return LeafNode(f"h{header_count}", new_line)
+
