@@ -40,6 +40,19 @@ class TestMarkdownParser(unittest.TestCase):
                 TextNode(" node", TextType.PLAIN)]
         self.assertListEqual(new_nodes, expected)
 
+    def text_twonodenodes1(self):
+        node = TextNode("This is a _italic_ node", TextType.PLAIN)
+        node2 = TextNode("This is also a **BOLD** node", TextType.PLAIN)
+        new_nodes = split_nodes_delimiter([node, node2], "`", TypeType.CODE)
+        expected = [
+                TextNode("This is a ", TextType.PLAIN),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" node", TextType.PLAIN),
+                TextNode("This is also a ", TextType.PLAIN),
+                TextNode("BOLD", TextType.BOLD),
+                TextNode(" node", TextType.PLAIN)]
+        self.assertListEqual(new_nodes, expected)
+
     def test_two_codes_in_one_node(self):
         node = TextNode("This is `code` node and another `code 2`", TextType.PLAIN)
         expected = [

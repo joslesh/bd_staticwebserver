@@ -168,6 +168,9 @@ def markdown_to_html_node(markdown: str) -> HTMLNode:
             case BlockType.UNORDERED_LIST:
                 list_of_children.append(ParentNode("ul", text_unordered_list_to_children(block))) 
 
+            case BlockType.QUOTE:
+                list_of_children.append(text_quote_block_to_children(block))
+
             case BlockType.ORDERED_LIST:
                 list_of_children.append(ParentNode("ol", text_ordered_list_to_children(block)))
 
@@ -190,7 +193,7 @@ def text_unordered_list_to_children(text: str) -> list[HTMLNode]:
     list_of_cleaned_lines = []
     for line in list_of_lines:
         new_line = line.strip("- ").strip()
-        list_of_cleaned_lines.append(LeafNode("li", new_line))
+        list_of_cleaned_lines.append(ParentNode("li", text_to_children(new_line)))
     return list_of_cleaned_lines
 
 def text_ordered_list_to_children(text: str) -> list[HTMLNode]:
@@ -198,11 +201,13 @@ def text_ordered_list_to_children(text: str) -> list[HTMLNode]:
     list_of_cleaned_lines = []
     for line in list_of_lines:
         new_line = line[3:]
-        list_of_cleaned_lines.append(LeafNode("li", new_line))
+        list_of_cleaned_lines.append(ParentNode("li", text_to_children(new_line)))
     return list_of_cleaned_lines
 
 def text_header_to_children(text: str) -> list[HTMLNode]:
     header_count = text.count("#")
     new_line = text[header_count + 1:]
-    return LeafNode(f"h{header_count}", new_line)
+    return ParentNode(f"h{header_count}", text_to_children(new_line))
 
+def text_quote_block_to_children(text: str) -> list[HTMLNode]:
+    return LeafNode("blockquote", text.replace("> ", "").strip())
